@@ -85,6 +85,7 @@ function saveTicketData($data) {
 	foreach($history['history']['prices'] as $key => $row)
 	{
 		$value = $row;
+
 		$times = $history['history']['times'][$key];	
 		$times = date('Y-m-d H:i:s', $times);
 
@@ -112,7 +113,7 @@ function saveTicketData($data) {
 
 		if( $row_cnt < 1 )
 		{
-			$sql = sprintf("INSERT INTO ticket (symbol, created_at, value, last_digit, total, single_total, gap)	VALUES ('%s', '%s', %f, '%s', '%d', '%d', '%d')", 
+			$sql = sprintf("INSERT INTO ticket (symbol, created_at, value, last_digit, total, single_total, gap)	VALUES ('%s', '%s', %s, '%s', '%d', '%d', '%d')", 
 			$symbol, $times, $value, $last_digit, $total, $single_total, $gap);
 
 			mysqli_query($conn, $sql);	
