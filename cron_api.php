@@ -100,10 +100,11 @@ function saveTicketData($data) {
 
 		$row_cnt = 0;
 
-		$sql = "SELECT 1 FROM ticket WHERE created_at = '%s'";
+		$sql = sprintf("SELECT * FROM ticket WHERE created_at = '%s'", $times);
 		if ($result = $conn->query($sql)) {
 
-		    $row_cnt = $result->num_rows;
+		    // $row_cnt = $result->num_rows;
+		    $row_cnt = mysqli_num_rows($result);
 
 		    /* free result set */
 		    $result->free();
@@ -122,6 +123,8 @@ function saveTicketData($data) {
 			$value, $last_digit, $total, $single_total, $gap, $times);
 
 			mysqli_query($conn, $sql);	
+
+			echo 'Updated: ' . $times . '<br>';
 		}
 		
 	}
