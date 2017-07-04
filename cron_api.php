@@ -15,7 +15,7 @@ $client->on("connect", function($headers) use ($client, $logger){
 	$param = array();
 	$param['ticks_history'] = 'R_100';
 	$param['end'] = 'latest';
-	$param['count'] = '10';
+	$param['count'] = '1000';
 	$client->send(json_encode($param));
 });
 
@@ -80,6 +80,19 @@ function saveTicketData($data) {
 	// $sql = "ALTER TABLE ticket AUTO_INCREMENT = 1;";
 	// mysqli_query($conn, $sql);
 
+	$sql = "select max(id) as max_id from ticket";
+	mysqli_query($conn, $sql);
+
+	$prev_max_block_id = 0;
+
+	if ($result = $conn->query($sql)) {
+		while($row = $result->fetch_array())
+	  	{
+		  	$prev_max_block_id = $row['max_id'];		  	
+		  	break;
+		}
+	}
+
 	$last_digit_array = [];
 
 	foreach($history['history']['prices'] as $key => $row)
@@ -98,14 +111,30 @@ function saveTicketData($data) {
 
 		$row_cnt = 0;
 
-		$sql = sprintf("SELECT * FROM ticket WHERE created_at = '%s'", $times);
+		$sql = sprintf("SELECT id FROM ticket WHERE created_at = '%s'", $times);
+
+		$duplicated_id = 0;
 		if ($result = $conn->query($sql)) {
 
 		    // $row_cnt = $result->num_rows;
 		    $row_cnt = mysqli_num_rows($result);
 
+		    if ($result = $conn->query($sql)) {
+				while($row = $result->fetch_array())
+			  	{
+				  	$duplicated_id = $row['id'];		  	
+				  	break;
+				}
+			}
+
 		    /* free result set */
 		    $result->free();
+		}
+
+		if( $duplicated_id > 0 && $duplicated_id < $prev_max_block_id )
+		{
+			$prev_max_block_id = $duplicated_id;
+			// echo $duplicated_id;
 		}
 
 		if( $row_cnt < 1 )
@@ -126,7 +155,11 @@ function saveTicketData($data) {
 		}
 	}
 
-	$sql = sprintf("SELECT id, value FROM ticket", $times);
+	echo $prev_max_block_id;
+
+	$sql = sprintf("SELECT id, value FROM ticket WHERE id >= %d", $prev_max_block_id);
+
+	echo $sql;
 
 	$last_digit_array = [];
 
@@ -147,8 +180,6 @@ function saveTicketData($data) {
 	  			$prev_max_id = $sub_row['id'];
 	  			break;
 	  		}
-
-	  		echo $prev_max_id;
 
 	  		$sub_result->free();
 
