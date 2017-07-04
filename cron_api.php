@@ -15,7 +15,7 @@ $client->on("connect", function($headers) use ($client, $logger){
 	$param = array();
 	$param['ticks_history'] = 'R_100';
 	$param['end'] = 'latest';
-	$param['count'] = '1000';
+	$param['count'] = '10';
 	$client->send(json_encode($param));
 });
 
@@ -90,10 +90,7 @@ function saveTicketData($data) {
 		$times = date('Y-m-d H:i:s', $times);
 
 		$last_digit = substr($value, -1);
-		$gap = gap($last_digit, $last_digit_array);
-
-		// echo json_encode($last_digit_array);
-
+		
 		$last_digit_array[] = $last_digit;
 
 		$total = total($value);
@@ -113,21 +110,64 @@ function saveTicketData($data) {
 
 		if( $row_cnt < 1 )
 		{
-			$sql = sprintf("INSERT INTO ticket (symbol, created_at, value, last_digit, total, single_total, gap)	VALUES ('%s', '%s', %s, '%s', '%d', '%d', '%d')", 
-			$symbol, $times, $value, $last_digit, $total, $single_total, $gap);
+			$sql = sprintf("INSERT INTO ticket (symbol, created_at, value, last_digit, total, single_total)	VALUES ('%s', '%s', %s, '%s', '%d', '%d')", 
+			$symbol, $times, $value, $last_digit, $total, $single_total);
 
 			mysqli_query($conn, $sql);	
 		}
 		else
 		{
-			$sql = sprintf("UPDATE ticket SET value = '%s', last_digit = '%s', total = '%s', single_total = '%s', gap = '%s' WHERE created_at = '%s'", 
-			$value, $last_digit, $total, $single_total, $gap, $times);
+			$sql = sprintf("UPDATE ticket SET value = '%s', last_digit = '%s', total = '%s', single_total = '%s' WHERE created_at = '%s'", 
+			$value, $last_digit, $total, $single_total, $times);
 
 			mysqli_query($conn, $sql);	
 
 			echo 'Updated: ' . $times . '<br>';
 		}
-		
+	}
+
+	$sql = sprintf("SELECT id, value FROM ticket", $times);
+
+	$last_digit_array = [];
+
+	if ($result = $conn->query($sql)) {
+		while($row = $result->fetch_array())
+	  	{
+		  	$value = $row['value'];
+		  	$id = $row['id'];
+
+		  	$last_digit = substr($value, -1);
+
+		  	$sql = sprintf("SELECT id FROM ticket WHERE last_digit = %d and id < %d order by id desc limit 1", $last_digit, $id);
+		  	$sub_result = $conn->query($sql);
+
+		  	$prev_max_id = -1;
+		  	while($sub_row = $sub_result->fetch_array())
+	  		{
+	  			$prev_max_id = $sub_row['id'];
+	  			break;
+	  		}
+
+	  		echo $prev_max_id;
+
+	  		$sub_result->free();
+
+	  		if( $prev_max_id < 0 )
+	  		{
+	  			$gap = '';
+	  		}
+	  		else
+	  		{
+	  			$gap = $id - $prev_max_id;
+	  		}
+
+	  		$sql = sprintf("UPDATE ticket SET gap = '%s' WHERE id = %d",  $gap, $id);
+
+			mysqli_query($conn, $sql);	
+	  	}	
+	    
+	    /* free result set */
+	    $result->free();
 	}
 
 	$conn->close();
